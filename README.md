@@ -8,6 +8,19 @@ XML or annotations and doing classpath scanning, instead just provide the differ
 needs stored inside of a single object, and pass that object to the various places that you need access to the global context.
 Similar to having an object that has direct properties on it with all the different globally-required objects.
 
+Possible Future Enhancements
+============================
+
+* Utilities for loading configuration from files into a bundle. A likely scenario in a lot of applications is going to be that you want
+to load a config file into a bundle that can be accessed across the application, so an easy way to do that is highly desirable.
+* Ability to provide values. These would be something that can be changed and would cause updates to be sent out to anything that
+uses those values. Potentially useful for something where you might have a properties file that gets changed on the file system, and
+you need to propagate those changes throughout the application. Or you get those values from a database. Or any other scenario where
+a value that has changes tracked and propagated would be useful. (this might also be how the configuration loading is implemented?)
+* Ability for a bundle to provide values. Could be used as a mechanism for allowing a bundle internally updating itself to communicate
+those changes without having to manually wire that change tracking up yourself. Can potentially be used for some kind of communication
+mechanism between bundles provided by other bundles?
+
 API
 ===
 
