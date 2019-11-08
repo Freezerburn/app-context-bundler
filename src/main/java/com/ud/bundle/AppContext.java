@@ -60,6 +60,14 @@ public class AppContext {
   // - A string followed by a string means the part is an object
   //
   // Storage of a value is a tree: in order to store or retrieve at any given path, must traverse the tree to get to the leaf.
+  //
+  // Registering simple values is only going to be designed to store leaf nodes. Everything about the path dictates whether or not an object
+  // or array will be traversed at each step to get to the leaf and values will be created to make that path happen.
+  // In order to store more complex sets of values, a separate method will take in a ContextValue that can be created using static factory
+  // methods to nest a more complex structure and that will be ingested into something internally with simple leaf nodes. Which will make
+  // it easy for the developer to create things like an array of values without having to do a bunch of String concatenation/formatting
+  // themselves to make that happen.
+  // The third way to handle creating value will be to ingest JSON and have everything done for you automatically.
 
   public ContextValue registerValue(@NotNull final String path, @NotNull final Object value) {
     Objects.requireNonNull(path, "'path' parameter must not be null.");
@@ -71,27 +79,15 @@ public class AppContext {
     if (registeredPaths.contains(path)) {
       throw new IllegalArgumentException("Path " + path + " has already been registered with a value. This is a programmer error.");
     }
+    // Only supports registering the leaf node values. The path is what defines how the internal structure is traversed.
+    if (!(value instanceof String || value instanceof Number)) {
+      throw new IllegalArgumentException("Value must be a String or Number. Was: " + value.getClass());
+    }
     final var parts = PATH_SPLITTER.split(path);
 
-    if (parts.length == 1) {
-      if (value instanceof String) {
-      } else if (value instanceof Number) {
-      } else {
-        throw new IllegalArgumentException("Path " + path + " is for a leaf node (direct descendent of the root) but the value is not a String or Number.");
-      }
+    for (int i = 0; i < parts.length; i++) {
+      String part = parts[i];
     }
-
-    if (value instanceof String) {
-    } else if (value instanceof Number) {
-    } else if (value instanceof List) {
-    } else if (value instanceof Map) {
-    } else if (value.getClass().isArray()) {
-    } else {
-      throw new IllegalArgumentException("Context values must be one of: String, Number, List, Map, Array. Got: " + value.getClass());
-    }
-
-    final var ctxValue = new ValueHolder<>(value);
-    final var key = new ValueKey<>(ctxValue.getClass(), NoQualifier.INSTANCE);
   }
 
   public <T extends ContextBundle> void registerBundle(final T bundle) {
