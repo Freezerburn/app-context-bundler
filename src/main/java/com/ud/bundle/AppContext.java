@@ -5,16 +5,94 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import org.jetbrains.annotations.NotNull;
 
 public class AppContext {
+
+  private static final Pattern PATH_SPLITTER = Pattern.compile("\\.");
+
+  public static final String VALUE_PATH_SEPARATOR = ".";
+
+  public static String joinPath(final String... parts) {
+    return String.join(VALUE_PATH_SEPARATOR, parts);
+  }
 
   private final Map<BundleKey<? extends Enum<?>, ? extends ContextBundle>, ContextBundle> bundles = new HashMap<>();
   private final Map<BundleKey<? extends Enum<?>, ? extends ContextBundle>, List<ContextBundle>> providedBundles = new HashMap<>();
   private final Deque<BundleKey<? extends Enum<?>, ? extends ContextBundle>> registerStack = new ArrayDeque<>();
+
+  private final Set<String> registeredPaths = new HashSet<>();
+  private final Map<ValueKey<? extends ContextValue, ? extends Enum<?>>, ContextValue> values = new HashMap<>();
+
+  // Values are one of 4 things:
+  // - Container, which is one of:
+  //   1 Object (string key)
+  //   2 Array (int key)
+  // 3 String
+  // 4 Number
+  // (in Java-land a Number can technically be an int, long, float, double, or byte, but those are details to only worry about when it
+  // comes to optimization. focus on the common, simple case first)
+  //
+  // Types are based off of how JSON works. A path is just a series of keys used to traverse a piece of JSON. All values should be
+  // possible to be created from JSON, or turned back into JSON.
+  //
+  // - Should values be allowed to be mutated into new types? (e.g.: update a number to be an array or string)
+  //
+  // Paths indicate things about the structure of values:
+  // - "a": leaf node, string or number
+  // - "a.0": "a" is an array, with the first element being a string or number
+  // - "a.b": "a" is an Object, "b" is the leaf node with a string or number
+  // - "a.0.b": "a" is an array, the first element of "a" is an object, "b" is the leaf node being a string or number
+  // - "a.b.c": "a" is an object, "b" is the key for an object, "c" is the leaf node with a string or number
+  // - ... etc. for more nested cases ...
+  // Which we can summarize with:
+  // - The root of all values can be considered to be an object with string keys
+  // - The last part of a path is always the leaf node and is a string or number
+  // - A string followed by a number means we have an array
+  // - A number as the last part of a path is still a leaf node
+  // - A string followed by a string means the part is an object
+  //
+  // Storage of a value is a tree: in order to store or retrieve at any given path, must traverse the tree to get to the leaf.
+
+  public ContextValue registerValue(@NotNull final String path, @NotNull final Object value) {
+    Objects.requireNonNull(path, "'path' parameter must not be null.");
+    Objects.requireNonNull(value, "'value' parameter must not be null.");
+
+    if (path.isBlank()) {
+      throw new IllegalArgumentException("'path' parameter must contain non-whitespace characters.");
+    }
+    if (registeredPaths.contains(path)) {
+      throw new IllegalArgumentException("Path " + path + " has already been registered with a value. This is a programmer error.");
+    }
+    final var parts = PATH_SPLITTER.split(path);
+
+    if (parts.length == 1) {
+      if (value instanceof String) {
+      } else if (value instanceof Number) {
+      } else {
+        throw new IllegalArgumentException("Path " + path + " is for a leaf node (direct descendent of the root) but the value is not a String or Number.");
+      }
+    }
+
+    if (value instanceof String) {
+    } else if (value instanceof Number) {
+    } else if (value instanceof List) {
+    } else if (value instanceof Map) {
+    } else if (value.getClass().isArray()) {
+    } else {
+      throw new IllegalArgumentException("Context values must be one of: String, Number, List, Map, Array. Got: " + value.getClass());
+    }
+
+    final var ctxValue = new ValueHolder<>(value);
+    final var key = new ValueKey<>(ctxValue.getClass(), NoQualifier.INSTANCE);
+  }
 
   public <T extends ContextBundle> void registerBundle(final T bundle) {
     registerBundle(bundle, NoQualifier.INSTANCE);
@@ -141,6 +219,136 @@ public class AppContext {
     @Override
     public int hashCode() {
       return Objects.hash(qualifier, clazz);
+    }
+  }
+
+  private static class ValueKey<T extends ContextValue, K extends Enum<K>> {
+
+    @NotNull
+    private final String pathPart;
+    @NotNull
+    private final Class<T> clazz;
+    @NotNull
+    private final Enum<K> qualifier;
+
+    private ValueKey(@NotNull final String pathPart, @NotNull final Class<T> clazz, @NotNull final Enum<K> qualifier) {
+      this.pathPart = pathPart;
+      this.clazz = clazz;
+      this.qualifier = qualifier;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ValueKey<?, ?> valueKey = (ValueKey<?, ?>) o;
+      return pathPart.equals(valueKey.pathPart) &&
+          clazz.equals(valueKey.clazz) &&
+          qualifier.equals(valueKey.qualifier);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(pathPart, clazz, qualifier);
+    }
+  }
+
+  private static class RootValue implements ContextValue {
+
+    @Override
+    public ContextValue parent() {
+      return this;
+    }
+
+    @Override
+    public ContextValue child(@NotNull final String key) {
+      throw new UnsupportedOperationException("NOT IMPLEMENTED");
+    }
+
+    @Override
+    public ContextValue child(final int key) {
+      throw new UnsupportedOperationException("NOT IMPLEMENTED");
+    }
+
+    @Override
+    public boolean isContainer() {
+      return true;
+    }
+
+    @Override
+    public boolean isObject() {
+      return true;
+    }
+
+    @Override
+    public boolean isArray() {
+      return false;
+    }
+
+    @Override
+    public boolean isLeaf() {
+      return false;
+    }
+
+    @Override
+    public Object update(@NotNull Object newValue) {
+      throw new UnsupportedOperationException("Cannot update the root value");
+    }
+  }
+
+  private static class ValueHolder implements ContextValue {
+
+    @NotNull
+    private String parentPath;
+    @NotNull
+    private Object value;
+
+    ValueHolder(@NotNull final Object value) {
+      this.value = value;
+    }
+
+    @Override
+    public ContextValue parent() {
+      return null;
+    }
+
+    @Override
+    public ContextValue child(@NotNull String key) {
+      return null;
+    }
+
+    @Override
+    public ContextValue child(int key) {
+      return null;
+    }
+
+    @Override
+    public boolean isContainer() {
+      return false;
+    }
+
+    @Override
+    public boolean isObject() {
+      return false;
+    }
+
+    @Override
+    public boolean isArray() {
+      return false;
+    }
+
+    @Override
+    public boolean isLeaf() {
+      return false;
+    }
+
+    @Override
+    public Object update(@NotNull Object newValue) {
+      return null;
     }
   }
 }
