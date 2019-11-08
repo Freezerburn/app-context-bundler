@@ -9,7 +9,7 @@ public interface ContextBundle {
   void apply(@NotNull final AppContext ctx, @NotNull final ContextBundle... requiredBundles);
 
   @NotNull
-  default List<Class<? extends ContextBundle>> requiredBundles() {
+  default List<QualifiedBundle<? extends ContextBundle>> requiredBundles() {
     return Collections.emptyList();
   }
 }

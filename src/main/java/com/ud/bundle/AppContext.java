@@ -34,7 +34,7 @@ public class AppContext {
     }
 
     final var requiredBundles = bundle.requiredBundles();
-    for (final Class<? extends ContextBundle> required : requiredBundles) {
+    for (final QualifiedBundle<? extends ContextBundle> required : requiredBundles) {
       if (!isBundleRegistered(required)) {
         throw new IllegalStateException(clazz + " requires bundle " + required + " that has not yet been registered. This is a programmer error.");
       }

@@ -166,8 +166,8 @@ public class AppContextTest {
 
     @Override
     @NotNull
-    public List<Class<? extends ContextBundle>> requiredBundles() {
-      return Collections.singletonList(TestBundle.class);
+    public List<QualifiedBundle<? extends ContextBundle>> requiredBundles() {
+      return Collections.singletonList(QualifiedBundle.create(TestBundle.class));
     }
   }
 
