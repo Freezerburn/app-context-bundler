@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
-public class AppContextTest {
+public class AppContextBundleTest {
 
   @Test
   void registerAndGetBundle() {
