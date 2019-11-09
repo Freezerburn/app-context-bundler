@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class AppContext {
 
@@ -28,8 +29,9 @@ public class AppContext {
   private final Map<BundleKey<? extends Enum<?>, ? extends ContextBundle>, List<ContextBundle>> providedBundles = new HashMap<>();
   private final Deque<BundleKey<? extends Enum<?>, ? extends ContextBundle>> registerStack = new ArrayDeque<>();
 
+  private final ContextValue root = new ObjectContainerValue(null);
   private final Set<String> registeredPaths = new HashSet<>();
-  private final Map<ValueKey<? extends ContextValue, ? extends Enum<?>>, ContextValue> values = new HashMap<>();
+  private final Map<ValueKey<? extends Enum<?>>, ContextValue> values = new HashMap<>();
 
   // Values are one of 4 things:
   // - Container, which is one of:
@@ -83,11 +85,93 @@ public class AppContext {
     if (!(value instanceof String || value instanceof Number)) {
       throw new IllegalArgumentException("Value must be a String or Number. Was: " + value.getClass());
     }
-    final var parts = PATH_SPLITTER.split(path);
-
+    final var parts = PATH_SPLITTER.split(path.toLowerCase());
     for (int i = 0; i < parts.length; i++) {
-      String part = parts[i];
+      if (parts[i].isBlank()) {
+        throw new IllegalArgumentException("No parts of the path can consist of only whitespace. (part " + i + " violated this rule)");
+      }
     }
+
+    var parent = root;
+    final var key = new ValueKey<>(path, NoQualifier.INSTANCE);
+    for (int i = 0; i < parts.length; i++) {
+      final var part = parts[i];
+      if (i + 1 == parts.length) {
+        // reached leaf
+        final var holder = new ValueHolder(parent, value);
+        if (parent.isArray()) {
+        } else {
+          ((ObjectContainerValue) parent).addChild(part, holder);
+        }
+        values.put(key, holder);
+        registeredPaths.add(path);
+        return holder;
+      }
+
+      var isNumeric = false;
+      var numericIdx = -1;
+      try {
+        numericIdx = Integer.parseInt(part);
+        isNumeric = true;
+      } catch (final NumberFormatException ignored) {
+        // isNumeric already false, nothing to do
+      }
+
+      ContextValue child = null;
+      if (isNumeric) {
+        // index into array received.
+        if (!parent.isArray()) {
+          // TODO: Print out path and type. Basically include useful error information for developer since this can be user facing.
+          throw new IllegalArgumentException("Got array index in path, but value was not an array.");
+        }
+        child = parent.child(numericIdx);
+      } else {
+        // string key into object received.
+        if (!parent.isObject()) {
+          // TODO: Print out path and type. Basically include useful error information for developer since this can be user facing.
+          throw new IllegalArgumentException("Got string key in path, but value was not an object.");
+        }
+        child = parent.child(part);
+      }
+
+      if (child == null) {
+        parent = addChildPath(parts, i, parent);
+      } else {
+        parent = child;
+      }
+    }
+
+    throw new IllegalStateException("Reached end of registerValue without either thrown another exception or returning the value. This is a library error.");
+  }
+
+  private ContextValue addChildPath(final String[] parts, final int i, final ContextValue parent) {
+    if (i + 2 == parts.length) {
+      // Next part will trigger the code for a leaf node. In this case we want to just return the current parent because the new value being registered
+      // needs to be put into it.
+      return parent;
+    }
+
+    final var nextPart = parts[i + 1];
+    var nextIsNumeric = false;
+    try {
+      Integer.parseInt(nextPart);
+      nextIsNumeric = true;
+    } catch (final NumberFormatException ignore) {
+      // Numeric flag already false, nothing to do.
+    }
+
+    if (nextIsNumeric) {
+      return new ArrayContainerValue(parent);
+    } else {
+      return new ObjectContainerValue(parent);
+    }
+  }
+
+  public ContextValue getValue(final String path) {
+    if (!registeredPaths.contains(path)) {
+      throw new IllegalArgumentException("Path " + path + " has not yet been registered.");
+    }
+    return values.get(new ValueKey<>(path, NoQualifier.INSTANCE));
   }
 
   public <T extends ContextBundle> void registerBundle(final T bundle) {
@@ -218,18 +302,15 @@ public class AppContext {
     }
   }
 
-  private static class ValueKey<T extends ContextValue, K extends Enum<K>> {
+  private static class ValueKey<K extends Enum<K>> {
 
     @NotNull
     private final String pathPart;
     @NotNull
-    private final Class<T> clazz;
-    @NotNull
     private final Enum<K> qualifier;
 
-    private ValueKey(@NotNull final String pathPart, @NotNull final Class<T> clazz, @NotNull final Enum<K> qualifier) {
+    private ValueKey(@NotNull final String pathPart, @NotNull final Enum<K> qualifier) {
       this.pathPart = pathPart;
-      this.clazz = clazz;
       this.qualifier = qualifier;
     }
 
@@ -241,33 +322,56 @@ public class AppContext {
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      ValueKey<?, ?> valueKey = (ValueKey<?, ?>) o;
+      ValueKey<?> valueKey = (ValueKey<?>) o;
       return pathPart.equals(valueKey.pathPart) &&
-          clazz.equals(valueKey.clazz) &&
           qualifier.equals(valueKey.qualifier);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(pathPart, clazz, qualifier);
+      return Objects.hash(pathPart, qualifier);
     }
   }
 
-  private static class RootValue implements ContextValue {
+  private static class ArrayContainerValue implements ContextValue {
+
+    @NotNull
+    private final ContextValue parent;
+    @NotNull
+    private final List<ContextValue> children = new ArrayList<>();
+
+    private ArrayContainerValue(@NotNull final ContextValue parent) {
+      this.parent = parent;
+    }
+
+    private void addChildWithStringIndex(final String idx, final ContextValue child) {
+      try {
+        addChild(Integer.parseInt(idx), child);
+      } catch (final NumberFormatException e) {
+        throw new IllegalStateException("Attempted to add a child with string representing a numeric index but was not an integer. This is a library error.", e);
+      }
+    }
+
+    private void addChild(final int idx, final ContextValue child) {
+      while (children.size() < idx - 1) {
+        children.add(null);
+      }
+      children.add(child);
+    }
 
     @Override
     public ContextValue parent() {
-      return this;
+      return parent;
     }
 
     @Override
     public ContextValue child(@NotNull final String key) {
-      throw new UnsupportedOperationException("NOT IMPLEMENTED");
+      throw new UnsupportedOperationException("Cannot get a child by String key from an array. This is a library error.");
     }
 
     @Override
     public ContextValue child(final int key) {
-      throw new UnsupportedOperationException("NOT IMPLEMENTED");
+      return children.get(key);
     }
 
     @Override
@@ -277,12 +381,12 @@ public class AppContext {
 
     @Override
     public boolean isObject() {
-      return true;
+      return false;
     }
 
     @Override
     public boolean isArray() {
-      return false;
+      return true;
     }
 
     @Override
@@ -292,34 +396,90 @@ public class AppContext {
 
     @Override
     public Object update(@NotNull Object newValue) {
-      throw new UnsupportedOperationException("Cannot update the root value");
+      throw new UnsupportedOperationException("Cannot update an array with a new array. This is a library error.");
+    }
+  }
+
+  private static class ObjectContainerValue implements ContextValue {
+
+    @Nullable
+    private final ContextValue parent;
+    private final Map<String, ContextValue> children = new HashMap<>();
+
+    private ObjectContainerValue(final ContextValue parent) {
+      this.parent = parent;
+    }
+
+    private void addChild(final String key, final ContextValue value) {
+      children.put(key, value);
+    }
+
+    @Override
+    public ContextValue parent() {
+      return parent;
+    }
+
+    @Override
+    public ContextValue child(@NotNull final String key) {
+      return children.get(key);
+    }
+
+    @Override
+    public ContextValue child(final int key) {
+      throw new UnsupportedOperationException("Cannot get an array index from an object container. This is a library error.");
+    }
+
+    @Override
+    public boolean isContainer() {
+      return true;
+    }
+
+    @Override
+    public boolean isObject() {
+      return false;
+    }
+
+    @Override
+    public boolean isArray() {
+      return true;
+    }
+
+    @Override
+    public boolean isLeaf() {
+      return false;
+    }
+
+    @Override
+    public Object update(@NotNull Object newValue) {
+      throw new UnsupportedOperationException("Cannot update an array container. This is a library error.");
     }
   }
 
   private static class ValueHolder implements ContextValue {
 
     @NotNull
-    private String parentPath;
+    private ContextValue parent;
     @NotNull
     private Object value;
 
-    ValueHolder(@NotNull final Object value) {
+    ValueHolder(@NotNull final ContextValue parent, @NotNull final Object value) {
+      this.parent = parent;
       this.value = value;
     }
 
     @Override
     public ContextValue parent() {
-      return null;
+      return parent;
     }
 
     @Override
-    public ContextValue child(@NotNull String key) {
-      return null;
+    public ContextValue child(@NotNull final String key) {
+      throw new UnsupportedOperationException("Cannot get a child of a leaf value. This is a library error.");
     }
 
     @Override
-    public ContextValue child(int key) {
-      return null;
+    public ContextValue child(final int key) {
+      throw new UnsupportedOperationException("Cannot get a child of a leaf value. This is a library error.");
     }
 
     @Override
@@ -339,12 +499,14 @@ public class AppContext {
 
     @Override
     public boolean isLeaf() {
-      return false;
+      return true;
     }
 
     @Override
-    public Object update(@NotNull Object newValue) {
-      return null;
+    public Object update(@NotNull final Object newValue) {
+      final var old = value;
+      value = newValue;
+      return old;
     }
   }
 }
