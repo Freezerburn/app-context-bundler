@@ -436,12 +436,12 @@ public class AppContext {
 
     @Override
     public boolean isObject() {
-      return false;
+      return true;
     }
 
     @Override
     public boolean isArray() {
-      return true;
+      return false;
     }
 
     @Override
