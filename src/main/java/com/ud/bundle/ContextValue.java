@@ -13,4 +13,6 @@ public interface ContextValue {
   boolean isLeaf();
 
   Object update(@NotNull final Object newValue);
+  String asString();
+  Number asNumber();
 }

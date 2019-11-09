@@ -398,6 +398,16 @@ public class AppContext {
     public Object update(@NotNull Object newValue) {
       throw new UnsupportedOperationException("Cannot update an array with a new array. This is a library error.");
     }
+
+    @Override
+    public String asString() {
+      throw new UnsupportedOperationException("Cannot represent an object as a string.");
+    }
+
+    @Override
+    public Number asNumber() {
+      throw new UnsupportedOperationException("Cannot represent an object as a number.");
+    }
   }
 
   private static class ObjectContainerValue implements ContextValue {
@@ -453,6 +463,16 @@ public class AppContext {
     public Object update(@NotNull Object newValue) {
       throw new UnsupportedOperationException("Cannot update an array container. This is a library error.");
     }
+
+    @Override
+    public String asString() {
+      throw new UnsupportedOperationException("Cannot represent an array as a string.");
+    }
+
+    @Override
+    public Number asNumber() {
+      throw new UnsupportedOperationException("Cannot represent an array as a number.");
+    }
   }
 
   private static class ValueHolder implements ContextValue {
@@ -507,6 +527,56 @@ public class AppContext {
       final var old = value;
       value = newValue;
       return old;
+    }
+
+    @Override
+    public String asString() {
+      return value.toString();
+    }
+
+    @Override
+    public Number asNumber() {
+      if (value instanceof Number) {
+        return (Number) value;
+      } else {
+        final String strValue = (String) value;
+        try {
+          return Long.parseLong(strValue);
+        } catch (final NumberFormatException ignored) {
+        }
+        try {
+          return Double.parseDouble(strValue);
+        } catch (final NumberFormatException ignored) {
+        }
+      }
+
+      throw new UnsupportedOperationException("Cannot represent the value " + value + " as a number.");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ValueHolder that = (ValueHolder) o;
+      return parent.equals(that.parent) &&
+          value.equals(that.value);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(parent, value);
+    }
+
+    @Override
+    public String toString() {
+      return "ValueHolder{" +
+          "parent=" + parent +
+          ", value=" + value +
+          '}';
     }
   }
 }
