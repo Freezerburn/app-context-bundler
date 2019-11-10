@@ -33,7 +33,7 @@ public class AppContextValueTest {
   }
 
   @Test
-  public void registerAndGetLeafStringInObjectValue() {
+  public void registerAndGetStringInObjectValue() {
     final var ctx = new AppContext();
     final var ctxValue = ctx.registerValue("a.b", "foo");
     assertEquals(ctxValue, ctx.getValue("a.b"));
@@ -42,7 +42,7 @@ public class AppContextValueTest {
   }
 
   @Test
-  public void registerAndGetLeafNumberInObjectValue() {
+  public void registerAndGetNumberInObjectValue() {
     final var ctx = new AppContext();
     final var ctxValue = ctx.registerValue("a.b", 2);
     assertEquals(ctxValue, ctx.getValue("a.b"));
@@ -51,7 +51,7 @@ public class AppContextValueTest {
   }
 
   @Test
-  public void registerAndGetLeafStringInArrayValue() {
+  public void registerAndGetStringInArrayValue() {
     final var ctx = new AppContext();
     final var ctxValue = ctx.registerValue("a.0", "foo");
     assertEquals(ctxValue, ctx.getValue("a.0"));
@@ -60,7 +60,7 @@ public class AppContextValueTest {
   }
 
   @Test
-  public void registerAndGetLeafNumberInArrayValue() {
+  public void registerAndGetNumberInArrayValue() {
     final var ctx = new AppContext();
     final var ctxValue = ctx.registerValue("a.0", 2);
     assertEquals(ctxValue, ctx.getValue("a.0"));
