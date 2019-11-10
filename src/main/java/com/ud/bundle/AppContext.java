@@ -100,6 +100,7 @@ public class AppContext {
         // reached leaf
         final var holder = new ValueHolder(parent, value);
         if (parent.isArray()) {
+          ((ArrayContainerValue) parent).addChildWithStringIndex(part, holder);
         } else {
           ((ObjectContainerValue) parent).addChild(part, holder);
         }
