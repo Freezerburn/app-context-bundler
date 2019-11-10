@@ -162,7 +162,7 @@ public class AppContext {
     } else {
       ret = new ObjectContainerValue(parent);
     }
-    if (nextIsNumeric) {
+    if (parent.isArray()) {
       ((ArrayContainerValue) parent).addChild(nextIdx, ret);
     } else {
       ((ObjectContainerValue) parent).addChild(nextPart, ret);
