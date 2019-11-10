@@ -146,26 +146,28 @@ public class AppContext {
   }
 
   private ContextValue addChildPath(final String[] parts, final int i, final ContextValue parent) {
-    if (i + 2 == parts.length) {
-      // Next part will trigger the code for a leaf node. In this case we want to just return the current parent because the new value being registered
-      // needs to be put into it.
-      return parent;
-    }
-
     final var nextPart = parts[i + 1];
     var nextIsNumeric = false;
+    var nextIdx = -1;
     try {
-      Integer.parseInt(nextPart);
+      nextIdx = Integer.parseInt(nextPart);
       nextIsNumeric = true;
     } catch (final NumberFormatException ignore) {
       // Numeric flag already false, nothing to do.
     }
 
+    final ContextValue ret;
     if (nextIsNumeric) {
-      return new ArrayContainerValue(parent);
+      ret = new ArrayContainerValue(parent);
     } else {
-      return new ObjectContainerValue(parent);
+      ret = new ObjectContainerValue(parent);
     }
+    if (nextIsNumeric) {
+      ((ArrayContainerValue) parent).addChild(nextIdx, ret);
+    } else {
+      ((ObjectContainerValue) parent).addChild(nextPart, ret);
+    }
+    return ret;
   }
 
   public ContextValue getValue(final String path) {
