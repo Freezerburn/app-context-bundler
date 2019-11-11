@@ -96,6 +96,19 @@ public class AppContext {
     final var key = new ValueKey<>(path, NoQualifier.INSTANCE);
     for (int i = 0; i < parts.length; i++) {
       final var part = parts[i];
+
+      var isNumeric = false;
+      var numericIdx = -1;
+      try {
+        numericIdx = Integer.parseInt(part);
+        isNumeric = true;
+      } catch (final NumberFormatException ignored) {
+        // isNumeric already false, nothing to do
+      }
+      if (isNumeric && parent == root) {
+        throw new IllegalArgumentException("Cannot use a numeric array index at the root level.");
+      }
+
       if (i + 1 == parts.length) {
         // reached leaf
         final var holder = new ValueHolder(parent, value);
@@ -107,15 +120,6 @@ public class AppContext {
         values.put(key, holder);
         registeredPaths.add(path);
         return holder;
-      }
-
-      var isNumeric = false;
-      var numericIdx = -1;
-      try {
-        numericIdx = Integer.parseInt(part);
-        isNumeric = true;
-      } catch (final NumberFormatException ignored) {
-        // isNumeric already false, nothing to do
       }
 
       ContextValue child = null;
