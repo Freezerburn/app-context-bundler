@@ -144,7 +144,7 @@ public class AppContext {
       }
 
       if (child == null) {
-        parent = addChildPath(parts, i, parent);
+        parent = addChildPath(parts, i, parent, qualifier);
       } else {
         parent = child;
       }
@@ -153,7 +153,7 @@ public class AppContext {
     throw new IllegalStateException("Reached end of registerValue without either thrown another exception or returning the value. This is a library error.");
   }
 
-  private ContextValue addChildPath(final String[] parts, final int i, final ContextValue parent) {
+  private ContextValue addChildPath(final String[] parts, final int i, final ContextValue parent, final Enum<?> qualifier) {
     final var nextPart = parts[i + 1];
     var nextIsNumeric = false;
     var nextIdx = -1;
@@ -170,6 +170,8 @@ public class AppContext {
     } else {
       ret = new ObjectContainerValue(parent);
     }
+    registeredPaths.add(parts[i]);
+    values.put(new ValueKey<>(parts[i], qualifier), ret);
     if (parent.isArray()) {
       ((ArrayContainerValue) parent).addChild(nextIdx, ret);
     } else {
