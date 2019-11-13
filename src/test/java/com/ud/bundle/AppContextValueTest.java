@@ -266,6 +266,24 @@ public class AppContextValueTest {
     assertEquals(2, ctx.getValue("b.0").asNumber().intValue());
   }
 
+  @Test
+  public void registerStringInObjectAndGetStringFromObject() {
+    final var ctx = new AppContext();
+    final var strValue = ctx.registerValue("a.b", "foo");
+    final var objValue = ctx.getValue("a");
+    assertEquals(strValue, objValue.child("b"));
+    assertEquals("foo", objValue.child("b").asString());
+  }
+
+  @Test
+  public void registerStringInObjectAndGetStringFromArray() {
+    final var ctx = new AppContext();
+    final var strValue = ctx.registerValue("a.0", "foo");
+    final var objValue = ctx.getValue("a");
+    assertEquals(strValue, objValue.child(0));
+    assertEquals("foo", objValue.child(0).asString());
+  }
+
   private enum TestQualifier {
     ONE,
     TWO
