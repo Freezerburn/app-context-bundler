@@ -72,6 +72,10 @@ public class AppContext {
   // The third way to handle creating value will be to ingest JSON and have everything done for you automatically.
 
   public ContextValue registerValue(@NotNull final String path, @NotNull final Object value) {
+    return registerValue(path, value, NoQualifier.INSTANCE);
+  }
+
+  public ContextValue registerValue(@NotNull final String path, @NotNull final Object value, @NotNull final Enum<?> qualifier) {
     Objects.requireNonNull(path, "'path' parameter must not be null.");
     Objects.requireNonNull(value, "'value' parameter must not be null.");
 
@@ -93,7 +97,7 @@ public class AppContext {
     }
 
     var parent = root;
-    final var key = new ValueKey<>(path, NoQualifier.INSTANCE);
+    final var key = new ValueKey<>(path, qualifier);
     for (int i = 0; i < parts.length; i++) {
       final var part = parts[i];
 
@@ -174,11 +178,15 @@ public class AppContext {
     return ret;
   }
 
-  public ContextValue getValue(final String path) {
+  public ContextValue getValue(@NotNull final String path) {
+    return getValue(path, NoQualifier.INSTANCE);
+  }
+
+  public ContextValue getValue(@NotNull final String path, @NotNull final Enum<?> qualifier) {
     if (!registeredPaths.contains(path)) {
       throw new IllegalArgumentException("Path " + path + " has not yet been registered.");
     }
-    return values.get(new ValueKey<>(path, NoQualifier.INSTANCE));
+    return values.get(new ValueKey<>(path, qualifier));
   }
 
   public <T extends ContextBundle> void registerBundle(final T bundle) {
