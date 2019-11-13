@@ -137,6 +137,32 @@ public class AppContextValueTest {
   }
 
   @Test
+  public void registerAndGetTwoLeafNumbersWithDifferentQualifiers() {
+    final var ctx = new AppContext();
+    final var numValue = ctx.registerValue("a", 2, TestQualifier.ONE);
+    final var numValue2 = ctx.registerValue("b", 3, TestQualifier.TWO);
+    assertEquals(numValue, ctx.getValue("a", TestQualifier.ONE));
+    assertEquals(numValue2, ctx.getValue("b", TestQualifier.TWO));
+    assertEquals(2, numValue.asNumber().intValue());
+    assertEquals(2, ctx.getValue("a", TestQualifier.ONE).asNumber().intValue());
+    assertEquals(3, numValue2.asNumber().intValue());
+    assertEquals(3, ctx.getValue("b", TestQualifier.TWO).asNumber().intValue());
+  }
+
+  @Test
+  public void registerAndGetTwoLeafStringsWithDifferentQualifier() {
+    final var ctx = new AppContext();
+    final var strValue = ctx.registerValue("b", "foo");
+    final var strValue2 = ctx.registerValue("a", "bar");
+    assertEquals(strValue2, ctx.getValue("a"));
+    assertEquals(strValue, ctx.getValue("b"));
+    assertEquals("bar", strValue2.asString());
+    assertEquals("bar", ctx.getValue("a").asString());
+    assertEquals("foo", strValue.asString());
+    assertEquals("foo", ctx.getValue("b").asString());
+  }
+
+  @Test
   public void registerAndGetLeafNumberAndString() {
     final var ctx = new AppContext();
     final var numValue = ctx.registerValue("a", 2);
@@ -160,6 +186,32 @@ public class AppContextValueTest {
     assertEquals(2, ctx.getValue("a.a").asNumber().intValue());
     assertEquals("foo", strValue.asString());
     assertEquals("foo", ctx.getValue("a.b").asString());
+  }
+
+  @Test
+  public void registerAndGetLeafNumberAndStringWithQualifiers() {
+    final var ctx = new AppContext();
+    final var numValue = ctx.registerValue("a", 2, TestQualifier.ONE);
+    final var strValue = ctx.registerValue("b", "foo", TestQualifier.TWO);
+    assertEquals(numValue, ctx.getValue("a", TestQualifier.ONE));
+    assertEquals(strValue, ctx.getValue("b", TestQualifier.TWO));
+    assertEquals(2, numValue.asNumber().intValue());
+    assertEquals(2, ctx.getValue("a", TestQualifier.ONE).asNumber().intValue());
+    assertEquals("foo", strValue.asString());
+    assertEquals("foo", ctx.getValue("b", TestQualifier.TWO).asString());
+  }
+
+  @Test
+  public void registerAndGetNumberAndStringInObjectWithQualifiers() {
+    final var ctx = new AppContext();
+    final var numValue = ctx.registerValue("a.a", 2, TestQualifier.ONE);
+    final var strValue = ctx.registerValue("a.b", "foo", TestQualifier.TWO);
+    assertEquals(numValue, ctx.getValue("a.a", TestQualifier.ONE));
+    assertEquals(strValue, ctx.getValue("a.b", TestQualifier.TWO));
+    assertEquals(2, numValue.asNumber().intValue());
+    assertEquals(2, ctx.getValue("a.a", TestQualifier.ONE).asNumber().intValue());
+    assertEquals("foo", strValue.asString());
+    assertEquals("foo", ctx.getValue("a.b", TestQualifier.TWO).asString());
   }
 
   @Test
@@ -212,5 +264,10 @@ public class AppContextValueTest {
     assertEquals("foo", ctx.getValue("a").asString());
     assertEquals(2, numValue.asNumber().intValue());
     assertEquals(2, ctx.getValue("b.0").asNumber().intValue());
+  }
+
+  private enum TestQualifier {
+    ONE,
+    TWO
   }
 }
