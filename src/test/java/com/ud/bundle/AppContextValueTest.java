@@ -2,6 +2,7 @@ package com.ud.bundle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -282,6 +283,16 @@ public class AppContextValueTest {
     final var objValue = ctx.getValue("a");
     assertEquals(strValue, objValue.child(0));
     assertEquals("foo", objValue.child(0).asString());
+  }
+
+  @Test
+  public void registerStringInDoublyNestedObject() {
+    final var ctx = new AppContext();
+    final var strValue = ctx.registerValue("a.a.a", "foo");
+    assertTrue(ctx.getValue("a").isObject());
+    assertTrue(ctx.getValue("a.a").isObject());
+    assertEquals(strValue, ctx.getValue("a.a.a"));
+    assertEquals("foo", ctx.getValue("a.a.a").asString());
   }
 
   private enum TestQualifier {
