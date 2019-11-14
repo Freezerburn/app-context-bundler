@@ -106,7 +106,9 @@ public class JsonContextValueReader implements ContextValueReader {
       } else if (currentValue.isJsonArray()) {
         final var arr = currentValue.getAsJsonArray();
         for (int i = 0; i < arr.size(); i++) {
-          st.add(Map.entry(Integer.toString(i), arr.get(i)));
+          sb.append(currentKey).append('.').append(i);
+          st.add(Map.entry(sb.toString(), arr.get(i)));
+          sb.setLength(0);
         }
       }
     }
